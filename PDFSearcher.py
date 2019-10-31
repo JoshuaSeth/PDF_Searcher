@@ -16,6 +16,7 @@ def Read(fileString, saveCount, searchTerms, dirString):
         SearchPDFPages(dirString, fileString, openedPDF, saveCount, searchTerms)
 
 
+
 def SearchPDFPages(dirString, fileString, openedPDF, saveCount, searchTerms):
     # get number of pages
     NumPages = openedPDF.getNumPages()
@@ -85,6 +86,24 @@ from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QProgressBar, QLineEdit, QHBoxLayout, QPushButton, QFileDialog, QLabel, QTextEdit, QApplication, QCheckBox, QGridLayout, QGroupBox, QMenu, QPushButton, QRadioButton, QVBoxLayout, QWidget
 import sys
 
+class External(QThread):
+    """
+    Runs a counter thread.
+    """
+    countChanged = pyqtSignal(int)
+    directory = ""
+    dirString = ""
+    searchTerms = []
+    currentBookNr = 0
+
+    def run(self):
+        for file in os.listdir(self.directory):
+            self.currentBookNr += 1
+            print(self.currentBookNr)
+            filename = os.fsdecode(file)
+            if filename.endswith(".pdf"):
+                Read(self.dirString + "/" + filename, self.currentBookNr, searchTerms=self.searchTerms, dirString=self.dirString)
+            self.countChanged.emit(self.currentBookNr)
 
 
 class Window(QWidget):
@@ -188,13 +207,22 @@ class Window(QWidget):
         file_count = len(files)
         self.progbar.setMaximum(file_count)
         print(file_count)
-        for file in os.listdir(self.directory):
-            saveCount += 1
-            print(saveCount)
-            self.progbar.setValue(saveCount)
-            filename = os.fsdecode(file)
-            if filename.endswith(".pdf"):
-                Read(self.dirString + "/"+filename, saveCount, searchTerms=self.searchTerms, dirString=self.dirString)
+
+        #Start multithreaded task
+        self.PDFSearchTask = External()
+        self.PDFSearchTask.directory = self.directory
+        self.PDFSearchTask.dirString = self.dirString
+        self.PDFSearchTask.searchTerms = self.searchTerms
+        self.PDFSearchTask.currentBookNr = saveCount
+
+        #Connect multithreaded counter
+        self.PDFSearchTask.countChanged.connect(self.onCountChanged)
+        self.PDFSearchTask.start()
+
+    def onCountChanged(self, value):
+        self.progbar.setValue(value)
+
+
 
 
 App = QApplication(sys.argv)

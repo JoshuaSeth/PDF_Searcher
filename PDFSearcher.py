@@ -60,20 +60,22 @@ def SavePDFPagesAsFile(fileString, pages, saveCount, dirString):
     output = PdfFileWriter()
     donePages = []
 
-
+    # save pages with search results to a new pdf
     for page in pages:
         for plusandminus in range(-3, 3):
             if not donePages.__contains__(page+plusandminus) and page+plusandminus > 0 and page+plusandminus < inputpdf.numPages:
                 donePages.append(page+plusandminus)
                 output.addPage(inputpdf.getPage(page+plusandminus))
 
+    #make directory and write to it
     if not os.path.exists(dirString  + "/SearchResults/"):
         os.makedirs(dirString  + "/SearchResults/")
     srDir= dirString  + "/SearchResults/" +"result"+ str(saveCount) + "searchResult.pdf"
     with open(srDir, "wb") as outputStream:
         output.write(outputStream)
-    subprocess.call(['open','-a','Preview',srDir])
-    #webbrowser.open_new(r'srDir')
+
+
+
 
 
 
@@ -83,8 +85,9 @@ def SavePDFPagesAsFile(fileString, pages, saveCount, dirString):
 
 #GUI
 from PyQt5 import QtGui
+from PyQt5.QtGui import QIcon, QPixmap, QPalette
 from PyQt5.QtCore import QThread, pyqtSignal
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QProgressBar, QLineEdit, QHBoxLayout, QPushButton, QFileDialog, QLabel, QTextEdit, QApplication, QCheckBox, QGridLayout, QGroupBox, QMenu, QPushButton, QRadioButton, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QApplication, QScrollArea, QWidget, QVBoxLayout, QProgressBar, QLineEdit, QHBoxLayout, QPushButton, QFileDialog, QLabel, QTextEdit, QApplication, QCheckBox, QGridLayout, QGroupBox, QMenu, QPushButton, QRadioButton, QVBoxLayout, QWidget
 import sys
 
 class External(QThread):
@@ -113,6 +116,11 @@ class Window(QWidget):
     dirString = "/Users/"
     directory = os.fsencode(dirString)
     searchTerms = []
+    renderedPDFS = []
+    pdfLayer1DocLimit = 4
+    pdfLayer2DocLimit = 4
+    currentDocsPDFLayer1 =0
+    currentDocsPDFLayer2 = 0
 
     def __init__(self):
         super().__init__()
@@ -126,31 +134,44 @@ class Window(QWidget):
         self.InitWindow()
 
     def InitWindow(self):
+        #General GUI Settings
         self.setWindowIcon(QtGui.QIcon("icon.png"))
         self.setWindowTitle(self.title)
         self.setGeometry(self.left, self.top, self.width, self.height)
 
-        mainContainer = QHBoxLayout()
+        fullWindowContainer = QVBoxLayout()
 
-        vbox = QVBoxLayout()
+        uiContainer = QHBoxLayout()
 
-        self.InstantiateDescription(vbox)
-        self.InstantiateGetFolderPathButton(vbox)
-        self.InstantiateSearchButton(vbox)
-        self.InstantiateProgressBar(vbox)
+        #Buttons GUI
+        buttonsContainer = QVBoxLayout()
 
-        mainContainer.addLayout(vbox)
+        self.InstantiateDescription(buttonsContainer)
+        self.InstantiateGetFolderPathButton(buttonsContainer)
+        self.InstantiateSearchButton(buttonsContainer)
+        self.InstantiateProgressBar(buttonsContainer)
+        uiContainer.addLayout(buttonsContainer)
+
+        #Search term grid GUI
+        SearchTermsGrid = QGridLayout()
+        SearchTermsGrid.addWidget(self.createExampleGroup(), 0, 0)
+        SearchTermsGrid.addWidget(self.createExampleGroup(), 1, 0)
+        SearchTermsGrid.addWidget(self.createExampleGroup(), 0, 1)
+        SearchTermsGrid.addWidget(self.createExampleGroup(), 1, 1)
+        uiContainer.addLayout(SearchTermsGrid)
 
 
-        grid = QGridLayout()
-        grid.addWidget(self.createExampleGroup(), 0, 0)
-        grid.addWidget(self.createExampleGroup(), 1, 0)
-        grid.addWidget(self.createExampleGroup(), 0, 1)
-        grid.addWidget(self.createExampleGroup(), 1, 1)
 
-        mainContainer.addLayout(grid)
+        # PDF GUI
+        self.pdfLayer1 = QHBoxLayout()
+        self.pdfLayer2 = QHBoxLayout()
 
-        self.setLayout(mainContainer)
+        #Add layers to super container
+
+        fullWindowContainer.addLayout(uiContainer)
+        fullWindowContainer.addLayout(self.pdfLayer1)
+        fullWindowContainer.addLayout(self.pdfLayer2)
+        self.setLayout(fullWindowContainer)
 
         self.show()
 
@@ -194,6 +215,70 @@ class Window(QWidget):
         self.startSearchButton.clicked.connect(self.RunProgram)
         vbox.addWidget(self.startSearchButton)
 
+    def InstantiateScrollArea(self, box, PDFPath, PDFName):
+        #Make directory for images of PDF
+        imagesPath = os.getcwd() + "/PDFImages/" + PDFName +"/"
+        if not os.path.exists(imagesPath):
+            os.makedirs(imagesPath)
+
+        #Prapre container to add images to and scrollarea
+        scrollArea = QScrollArea(widgetResizable=True)
+        content_widget = QWidget()
+        scrollArea.setWidget(content_widget)
+        imagesHolder = QVBoxLayout(content_widget)
+
+
+        #Convert PDF to JPGs
+        import fitz
+        pdffile = PDFPath
+        doc = fitz.open(pdffile)
+        pageCount = PyPDF2.PdfFileReader(PDFPath).numPages
+        for pageNR in range(0, pageCount):
+            #If an image is not yet generated for a page generate it
+            output = imagesPath + PDFName + "SRPage" + str(pageNR) + ".png"
+            if not os.path.isfile(output):
+                page = doc.loadPage(pageNR)  # number of page
+                pix = page.getPixmap()
+                pix.writePNG(output)
+
+            #Actual images
+            imageLabel = QLabel(self)
+            pixmap = QPixmap(output)
+            imageLabel.setPixmap(pixmap)
+            #imageLabel.setMinimumHeight(pixmap.height())
+
+            imagesHolder.addWidget(imageLabel)
+            imageLabel.height = pixmap.height()
+
+
+        box.addWidget(scrollArea)
+
+    def CheckPDFAdddedByThread(self):
+        # make directory and write to it
+        if not os.path.exists(self.dirString + "/SearchResults/"):
+            os.makedirs(self.dirString + "/SearchResults/")
+
+        #Loop through search results directory
+        dirName =self.dirString + "/SearchResults/"
+        searchResultsDir = os.listdir(dirName)
+        pathNU, dirsNU, files = next(os.walk(dirName))
+        print(len(files))
+        if len(files) is not 0:
+            for searchResult in searchResultsDir:
+                filename = os.fsdecode(searchResult)
+                filePath = dirName+filename
+                if not self.renderedPDFS.__contains__(filename) and filename.__contains__(".pdf"):
+                    layer = self.pdfLayer1
+                    if self.currentDocsPDFLayer1<self.pdfLayer1DocLimit:
+                        self.currentDocsPDFLayer1+=1
+                    if self.currentDocsPDFLayer1 >= self.pdfLayer1DocLimit:
+                        self.currentDocsPDFLayer2 += 1
+                        layer = self.pdfLayer2
+                    self.InstantiateScrollArea(layer, filePath, filename)
+                    self.renderedPDFS.append(filename)
+
+
+
     def getFolderPath(self):
 
         folder = QFileDialog.getExistingDirectory(self, "Select Directory")
@@ -225,6 +310,7 @@ class Window(QWidget):
 
     def onCountChanged(self, value):
         self.progbar.setValue(value)
+        self.CheckPDFAdddedByThread()
 
 
 

@@ -8,13 +8,6 @@ import re
 
 
 
-def Read(fileString, saveCount, searchTerms, dirString):
-    # open the pdf file
-    openedPDF = PyPDF2.PdfFileReader(fileString)
-
-    if not openedPDF.isEncrypted:
-        SearchPDFPages(dirString, fileString, openedPDF, saveCount, searchTerms)
-
 
 
 def SearchPDFPages(dirString, fileString, openedPDF, saveCount, searchTerms):
@@ -25,7 +18,7 @@ def SearchPDFPages(dirString, fileString, openedPDF, saveCount, searchTerms):
     # extract text and do the search
     for i in range(0, NumPages):
         PageObj = openedPDF.getPage(i)
-        print("this is page " + str(i))
+        print("this is page " + str(i) + " of the book: " + fileString)
         Text = PageObj.extractText()
         totalText += Text
         # print(Text)
@@ -86,24 +79,25 @@ from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QProgressBar, QLineEdit, QHBoxLayout, QPushButton, QFileDialog, QLabel, QTextEdit, QApplication, QCheckBox, QGridLayout, QGroupBox, QMenu, QPushButton, QRadioButton, QVBoxLayout, QWidget
 import sys
 
-class External(QThread):
-    """
-    Runs a counter thread.
-    """
-    countChanged = pyqtSignal(int)
-    directory = ""
-    dirString = ""
+class ReadingThread(QThread):
+    finished = pyqtSignal(bool)
+
+    fileString =""
+    saveCount = 0
     searchTerms = []
-    currentBookNr = 0
+    dirString = ""
 
     def run(self):
-        for file in os.listdir(self.directory):
-            self.currentBookNr += 1
-            print(self.currentBookNr)
-            filename = os.fsdecode(file)
-            if filename.endswith(".pdf"):
-                Read(self.dirString + "/" + filename, self.currentBookNr, searchTerms=self.searchTerms, dirString=self.dirString)
-            self.countChanged.emit(self.currentBookNr)
+        # open the pdf file
+        openedPDF = PyPDF2.PdfFileReader(self.fileString)
+
+        if not openedPDF.isEncrypted:
+            SearchPDFPages(self.dirString, self.fileString, openedPDF, self.saveCount, self.searchTerms)
+
+        #after finishing
+        self.finished.emit(True)
+
+
 
 
 
@@ -209,20 +203,31 @@ class Window(QWidget):
         file_count = len(files)
         self.progbar.setMaximum(file_count)
         print(file_count)
+        self.ScanAllPDFs()
 
-        #Start multithreaded task
-        self.PDFSearchTask = External()
-        self.PDFSearchTask.directory = self.directory
-        self.PDFSearchTask.dirString = self.dirString
-        self.PDFSearchTask.searchTerms = self.searchTerms
-        self.PDFSearchTask.currentBookNr = saveCount
+    def ScanAllPDFs(self):
+        self.currentBookNr = 0
+        self.threads = []
+        for file in os.listdir(self.directory):
+            self.currentBookNr += 1
+            print(self.currentBookNr)
+            filename = os.fsdecode(file)
+            if filename.endswith(".pdf"):
+                # Start multithreaded task
+                self.PDFSearchTask = ReadingThread()
+                self.PDFSearchTask.fileString = self.dirString + "/" + filename
+                self.PDFSearchTask.dirString = self.dirString
+                self.PDFSearchTask.searchTerms = self.searchTerms
+                self.PDFSearchTask.saveCount = self.currentBookNr
 
-        #Connect multithreaded counter
-        self.PDFSearchTask.countChanged.connect(self.onCountChanged)
-        self.PDFSearchTask.start()
+                # Connect multithreaded counter
+                self.PDFSearchTask.finished.connect(self.onCountChanged)
+                self.PDFSearchTask.start()
+                self.threads.append(self.PDFSearchTask)
+
 
     def onCountChanged(self, value):
-        self.progbar.setValue(value)
+        self.progbar.setValue(self.progbar.value()+1)
 
 
 

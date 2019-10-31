@@ -3,7 +3,7 @@ import subprocess
 from PyPDF2 import PdfFileWriter, PdfFileReader
 import PyPDF2
 import re
-
+import webbrowser
 
 
 
@@ -72,7 +72,8 @@ def SavePDFPagesAsFile(fileString, pages, saveCount, dirString):
     srDir= dirString  + "/SearchResults/" +"result"+ str(saveCount) + "searchResult.pdf"
     with open(srDir, "wb") as outputStream:
         output.write(outputStream)
-    subprocess.Popen([srDir],shell=True)
+    subprocess.call(['open','-a','Preview',srDir])
+    #webbrowser.open_new(r'srDir')
 
 
 
@@ -153,6 +154,7 @@ class Window(QWidget):
 
         self.show()
 
+    #Use this group for keyword combinations
     def createExampleGroup(self):
         groupBox = QGroupBox("Search Terms")
 

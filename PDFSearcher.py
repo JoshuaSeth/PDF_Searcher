@@ -106,6 +106,8 @@ class External(QThread):
             self.countChanged.emit(self.currentBookNr)
 
 
+
+
 class Window(QWidget):
     dirString = "/Users/"
     directory = os.fsencode(dirString)

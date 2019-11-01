@@ -1,11 +1,16 @@
+#Program
 import os
-import subprocess
 from PyPDF2 import PdfFileWriter, PdfFileReader
 import PyPDF2
 import re
-import webbrowser
+import fitz
 
-
+#GUI
+from PyQt5 import QtGui
+from PyQt5.QtGui import QIcon, QPixmap, QPalette
+from PyQt5.QtCore import QThread, pyqtSignal
+from PyQt5.QtWidgets import QApplication, QScrollArea, QWidget, QVBoxLayout, QProgressBar, QLineEdit, QHBoxLayout, QPushButton, QFileDialog, QLabel, QTextEdit, QApplication, QCheckBox, QGridLayout, QGroupBox, QMenu, QPushButton, QRadioButton, QVBoxLayout, QWidget
+import sys
 
 
 def Read(fileString, saveCount, searchTerms, dirString):
@@ -75,21 +80,7 @@ def SavePDFPagesAsFile(fileString, pages, saveCount, dirString):
         output.write(outputStream)
 
 
-
-
-
-
-
-
-
-
 #GUI
-from PyQt5 import QtGui
-from PyQt5.QtGui import QIcon, QPixmap, QPalette
-from PyQt5.QtCore import QThread, pyqtSignal
-from PyQt5.QtWidgets import QApplication, QScrollArea, QWidget, QVBoxLayout, QProgressBar, QLineEdit, QHBoxLayout, QPushButton, QFileDialog, QLabel, QTextEdit, QApplication, QCheckBox, QGridLayout, QGroupBox, QMenu, QPushButton, QRadioButton, QVBoxLayout, QWidget
-import sys
-
 class External(QThread):
     """
     Runs a counter thread.
@@ -229,7 +220,6 @@ class Window(QWidget):
 
 
         #Convert PDF to JPGs
-        import fitz
         pdffile = PDFPath
         doc = fitz.open(pdffile)
         pageCount = PyPDF2.PdfFileReader(PDFPath).numPages

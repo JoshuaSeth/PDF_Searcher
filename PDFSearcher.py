@@ -34,11 +34,14 @@ def SearchPDFPages(dirString, fileString, openedPDF, saveCount, searchTerms):
         Text = PageObj.extractText()
         totalText += Text
         # print(Text)
+        foundAll = True
         for word in searchTerms:
             ResSearch = re.search(word, Text)
-            if (ResSearch != None):
-                print("Found")
-                savedPages.append(i)
+            if (ResSearch is None):
+                foundAll = False
+        if foundAll:
+            print("Found")
+            savedPages.append(i)
     saveCount += 1
     SavePDFPagesAsFile(fileString, savedPages, saveCount, dirString)
 
@@ -60,24 +63,24 @@ def SearchPDFPages(dirString, fileString, openedPDF, saveCount, searchTerms):
 
 
 def SavePDFPagesAsFile(fileString, pages, saveCount, dirString):
-    print("Found")
-    inputpdf = PdfFileReader(open(fileString, "rb"))
-    output = PdfFileWriter()
-    donePages = []
+    if len(pages) is not 0:
+        inputpdf = PdfFileReader(open(fileString, "rb"))
+        output = PdfFileWriter()
+        donePages = []
 
-    # save pages with search results to a new pdf
-    for page in pages:
-        for plusandminus in range(-3, 3):
-            if not donePages.__contains__(page+plusandminus) and page+plusandminus > 0 and page+plusandminus < inputpdf.numPages:
-                donePages.append(page+plusandminus)
-                output.addPage(inputpdf.getPage(page+plusandminus))
+        # save pages with search results to a new pdf
+        for page in pages:
+            for plusandminus in range(-3, 3):
+                if not donePages.__contains__(page+plusandminus) and page+plusandminus > 0 and page+plusandminus < inputpdf.numPages:
+                    donePages.append(page+plusandminus)
+                    output.addPage(inputpdf.getPage(page+plusandminus))
 
-    #make directory and write to it
-    if not os.path.exists(dirString  + "/SearchResults/"):
-        os.makedirs(dirString  + "/SearchResults/")
-    srDir= dirString  + "/SearchResults/" +"result"+ str(saveCount) + "searchResult.pdf"
-    with open(srDir, "wb") as outputStream:
-        output.write(outputStream)
+        #make directory and write to it
+        if not os.path.exists(dirString  + "/SearchResults/"):
+            os.makedirs(dirString  + "/SearchResults/")
+        srDir= dirString  + "/SearchResults/" +"result"+ str(saveCount) + "searchResult.pdf"
+        with open(srDir, "wb") as outputStream:
+            output.write(outputStream)
 
 
 #GUI

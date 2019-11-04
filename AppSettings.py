@@ -1,0 +1,6 @@
+
+
+
+
+def OpenAppSettingsWindow():
+    print("openedSettings")

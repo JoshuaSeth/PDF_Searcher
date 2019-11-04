@@ -9,8 +9,11 @@ import fitz
 from PyQt5 import QtGui
 from PyQt5.QtGui import QIcon, QPixmap, QPalette
 from PyQt5.QtCore import QThread, pyqtSignal
-from PyQt5.QtWidgets import QApplication, QScrollArea, QWidget, QVBoxLayout, QProgressBar, QLineEdit, QHBoxLayout, QPushButton, QFileDialog, QLabel, QTextEdit, QApplication, QCheckBox, QGridLayout, QGroupBox, QMenu, QPushButton, QRadioButton, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QMainWindow, QApplication, QScrollArea, QWidget, QVBoxLayout, QProgressBar, QLineEdit, QHBoxLayout, QPushButton, QFileDialog, QLabel, QTextEdit, QApplication, QCheckBox, QGridLayout, QGroupBox, QMenu, QPushButton, QRadioButton, QVBoxLayout, QWidget
 import sys
+
+from gensim.summarization.summarizer import summarize
+
 
 
 def Read(fileString, saveCount, searchTerms, dirString):
@@ -43,7 +46,7 @@ def SearchPDFPages(dirString, fileString, openedPDF, saveCount, searchTerms):
             print("Found")
             savedPages.append(i)
     saveCount += 1
-    SavePDFPagesAsFile(fileString, savedPages, saveCount, dirString)
+    SavePDFPagesAsFile(fileString, savedPages, saveCount, dirString, searchTerms)
 
 
 # def Print_Summary(Text):
@@ -62,7 +65,7 @@ def SearchPDFPages(dirString, fileString, openedPDF, saveCount, searchTerms):
     #     print(sentence)
 
 
-def SavePDFPagesAsFile(fileString, pages, saveCount, dirString):
+def SavePDFPagesAsFile(fileString, pages, saveCount, dirString, searchTerms):
     if len(pages) is not 0:
         inputpdf = PdfFileReader(open(fileString, "rb"))
         output = PdfFileWriter()
@@ -81,6 +84,24 @@ def SavePDFPagesAsFile(fileString, pages, saveCount, dirString):
         srDir= dirString  + "/SearchResults/" +"result"+ str(saveCount) + "searchResult.pdf"
         with open(srDir, "wb") as outputStream:
             output.write(outputStream)
+
+        PrintSummaryOfResults(srDir=srDir, searchTerms=searchTerms)
+
+def PrintSummaryOfResults(srDir, searchTerms):
+    searchResultsPDF = PyPDF2.PdfFileReader(srDir)
+    NumPages = searchResultsPDF.getNumPages()
+    text = ""
+    # extract text and do the search
+    for i in range(0, NumPages):
+        PageObj = searchResultsPDF.getPage(i)
+        print("this is page " + str(i))
+        pageText = PageObj.extractText()
+        text += pageText
+    title = ""
+    for term in searchTerms:
+        title += term + " "
+    print(summarize(text=text, word_count=400))
+
 
 
 #GUI
@@ -106,7 +127,7 @@ class External(QThread):
 
 
 
-class Window(QWidget):
+class Window(QMainWindow):
     dirString = "/Users/"
     directory = os.fsencode(dirString)
     searchTerms = []
@@ -119,21 +140,26 @@ class Window(QWidget):
     def __init__(self):
         super().__init__()
 
+        mainWidget = QWidget(self)
+        self.setCentralWidget(mainWidget)
+        layout = QVBoxLayout()
+        mainWidget.setLayout(layout)
+
         self.title = "Search Multiple PDFs"
-        self.top = 200
-        self.left = 500
-        self.width = 400
-        self.height = 300
+        mainWidget.top = 200
+        mainWidget.left = 500
+        mainWidget.width = 400
+        mainWidget.height = 300
 
-        self.InitWindow()
+        self.InitWindow(layout)
 
-    def InitWindow(self):
+    def InitWindow(self, layout):
         #General GUI Settings
         self.setWindowIcon(QtGui.QIcon("icon.png"))
         self.setWindowTitle(self.title)
-        self.setGeometry(self.left, self.top, self.width, self.height)
+        #self.setGeometry(self.left, self.top, self.width, self.height)
 
-        fullWindowContainer = QVBoxLayout()
+        #fullWindowContainer = QVBoxLayout()
 
         uiContainer = QHBoxLayout()
 
@@ -162,10 +188,10 @@ class Window(QWidget):
 
         #Add layers to super container
 
-        fullWindowContainer.addLayout(uiContainer)
-        fullWindowContainer.addLayout(self.pdfLayer1)
-        fullWindowContainer.addLayout(self.pdfLayer2)
-        self.setLayout(fullWindowContainer)
+        layout.addLayout(uiContainer)
+        layout.addLayout(self.pdfLayer1)
+        layout.addLayout(self.pdfLayer2)
+        #self.setLayout(mainWidget)
 
         self.show()
 
@@ -310,4 +336,7 @@ class Window(QWidget):
 
 App = QApplication(sys.argv)
 window = Window()
+from Menubar import ShowMenuItems
+menu = ShowMenuItems(mainWindow=window)
+#menu.__init__()
 sys.exit(App.exec())

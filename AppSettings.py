@@ -1,7 +1,7 @@
 import sys
 from PyQt5.QtWidgets import QWidget, QAction, qApp, QApplication, QVBoxLayout, QHBoxLayout, QPushButton, QMainWindow, QLabel, QGridLayout, QSpinBox
 from PyQt5.QtGui import QIcon
-
+import re
 
 class SettingsMenu():
 
@@ -9,9 +9,10 @@ class SettingsMenu():
     documentShowRows = 2
 
 
-
     def __init__(self):
         super().__init__()
+
+        self.LoadSettings()
 
         self.title = "Search Multiple PDFs"
         self.top = 200
@@ -29,6 +30,22 @@ class SettingsMenu():
         self._new_window.show()
 
         print('loaded preferences')
+
+    def SaveSettings(self):
+        with open('settings.txt', 'w') as filehandle:
+            filehandle.write("DocumentShowColumns ")
+            filehandle.write(str(self.documentShowColumns) + " ")
+            filehandle.write("DocumentShowRows ")
+            filehandle.write(str(self.documentShowRows) + " ")
+
+    def LoadSettings(self):
+        with open('settings.txt', 'r') as filehandle:
+            string = filehandle.read()
+            f = string.split("DocumentShowColumns")[1].split(" ")[1]
+            self.documentShowColumns = int(f)
+            f = string.split("DocumentShowRows")[1].split(" ")[1]
+            self.documentShowRows = int(f)
+
 
 
 class NewWindow(QMainWindow):
@@ -61,6 +78,8 @@ class NewWindow(QMainWindow):
         #Make a grid for the labels and the spinboxes
         fieldsContainer = QHBoxLayout()
 
+        self.settingsMenu.LoadSettings()
+
         twoFields1 = QVBoxLayout()
         widthLabel = QLabel("Show Documents Columns")
         self.widthInput = QSpinBox()
@@ -86,8 +105,9 @@ class NewWindow(QMainWindow):
         #add grid to maincontainer
 
     def SetPagesValues(self):
-        self.settingsMenu.documentShowColumns = self.widthInput.value
-        self.settingsMenu.documentShowRows = self.heightInput.value
+        self.settingsMenu.documentShowColumns = self.widthInput.value()
+        self.settingsMenu.documentShowRows = self.heightInput.value()
+        self.settingsMenu.SaveSettings()
 
 
 

@@ -1,6 +1,7 @@
 import sys
 from PyQt5.QtWidgets import QMainWindow, QAction, qApp, QApplication
 from PyQt5.QtGui import QIcon
+from AppSettings import SettingsMenu
 
 
 class ShowMenuItems():
@@ -11,17 +12,18 @@ class ShowMenuItems():
         self.initUI(mainWindow)
 
     def initUI(self, mainWindow):
-        exitAct = QAction(QIcon('exit.png'), ' &Exit', mainWindow)
-        exitAct.setShortcut('Ctrl+Q')
-        exitAct.setStatusTip('Exit application')
-        exitAct.triggered.connect(qApp.quit)
+
+        openSettingsAct = QAction(QIcon('exit.png'), ' &Preferences', mainWindow)
+        openSettingsAct.setShortcut('Ctrl+,')
+        openSettingsAct.setStatusTip('Open preferences')
+        openSettingsAct.triggered.connect(SettingsMenu)
 
         #mainWindow.statusBar()
 
         menubar = mainWindow.menuBar()
         fileMenu = menubar.addMenu('&File')
         optionsMenu = menubar.addMenu('&Edit')
-        fileMenu.addAction(exitAct)
+        fileMenu.addAction(openSettingsAct)
 
 
 

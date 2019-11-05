@@ -8,8 +8,8 @@ import fitz
 #GUI
 from PyQt5 import QtGui
 from PyQt5.QtGui import QIcon, QPixmap, QPalette
-from PyQt5.QtCore import QThread, pyqtSignal
-from PyQt5.QtWidgets import QMainWindow, QApplication, QScrollArea, QWidget, QVBoxLayout, QProgressBar, QLineEdit, QHBoxLayout, QPushButton, QFileDialog, QLabel, QTextEdit, QApplication, QCheckBox, QGridLayout, QGroupBox, QMenu, QPushButton, QRadioButton, QVBoxLayout, QWidget
+from PyQt5.QtCore import QThread, pyqtSignal, Qt
+from PyQt5.QtWidgets import QMainWindow, QApplication, QTabWidget, QScrollArea, QWidget, QVBoxLayout, QProgressBar, QLineEdit, QHBoxLayout, QPushButton, QFileDialog, QLabel, QTextEdit, QApplication, QCheckBox, QGridLayout, QGroupBox, QMenu, QPushButton, QRadioButton, QVBoxLayout, QWidget, QDockWidget, QTabBar
 import sys
 
 from gensim.summarization.summarizer import summarize
@@ -170,6 +170,7 @@ class Window(QMainWindow):
         self.InstantiateGetFolderPathButton(buttonsContainer)
         self.InstantiateSearchButton(buttonsContainer)
         self.InstantiateProgressBar(buttonsContainer)
+        self.AddDockTest(buttonsContainer)
         uiContainer.addLayout(buttonsContainer)
 
         #Search term grid GUI
@@ -194,6 +195,18 @@ class Window(QMainWindow):
         #self.setLayout(mainWidget)
 
         self.show()
+
+    def AddDockTest(self, vbox):
+        self._tabOptions = QTabWidget(self)
+        self._tabOptions.setLayoutDirection(Qt.LeftToRight)
+        self._tabOptions.setDocumentMode(False)
+        self._tabOptions.setTabsClosable(False)
+        self._tabOptions.setMovable(False)
+
+        self.dock = QDockWidget('Tab Options', self)
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.dock)
+        self.dock.setWidget(self._tabOptions)
+        vbox.addWidget(self.progbar)
 
     #Use this group for keyword combinations
     def createExampleGroup(self):

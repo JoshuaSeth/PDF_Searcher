@@ -5,6 +5,8 @@ import PyPDF2
 import re
 import fitz
 
+from SearchBox import SearchBox
+
 #GUI
 from PyQt5 import QtGui
 from PyQt5.QtGui import QIcon, QPixmap, QPalette
@@ -137,6 +139,8 @@ class Window(QMainWindow):
     currentDocsPDFLayer1 =0
     currentDocsPDFLayer2 = 0
 
+    searchTermBoxes = []
+
     def __init__(self):
         super().__init__()
 
@@ -166,7 +170,7 @@ class Window(QMainWindow):
         #Buttons GUI
         buttonsContainer = QVBoxLayout()
 
-        self.InstantiateDescription(buttonsContainer)
+        #self.InstantiateDescription(buttonsContainer)
         self.InstantiateGetFolderPathButton(buttonsContainer)
         self.InstantiateSearchButton(buttonsContainer)
         self.InstantiateProgressBar(buttonsContainer)
@@ -174,12 +178,13 @@ class Window(QMainWindow):
         uiContainer.addLayout(buttonsContainer)
 
         #Search term grid GUI
-        SearchTermsGrid = QGridLayout()
-        SearchTermsGrid.addWidget(self.createExampleGroup(), 0, 0)
-        SearchTermsGrid.addWidget(self.createExampleGroup(), 1, 0)
-        SearchTermsGrid.addWidget(self.createExampleGroup(), 0, 1)
-        SearchTermsGrid.addWidget(self.createExampleGroup(), 1, 1)
-        uiContainer.addLayout(SearchTermsGrid)
+        self.SearchTermsGrid = QVBoxLayout()
+        self.AddSearchBox()
+
+        uiContainer.addLayout(self.SearchTermsGrid)
+        self.addSearchFieldButton = QPushButton("+")
+        uiContainer.addWidget(self.addSearchFieldButton)
+        self.addSearchFieldButton.clicked.connect(lambda: self.AddSearchBox())
 
 
 
@@ -196,6 +201,12 @@ class Window(QMainWindow):
 
         self.show()
 
+    def AddSearchBox(self):
+        sb = SearchBox()
+        self.SearchTermsGrid.addWidget(sb.Get())
+        self.searchTermBoxes.append(sb)
+
+
     def AddDockTest(self, vbox):
         self._tabOptions = QTabWidget(self)
         self._tabOptions.setLayoutDirection(Qt.LeftToRight)
@@ -208,23 +219,6 @@ class Window(QMainWindow):
         self.dock.setWidget(self._tabOptions)
         vbox.addWidget(self.progbar)
 
-    #Use this group for keyword combinations
-    def createExampleGroup(self):
-        groupBox = QGroupBox("Search Terms")
-
-        self.radio1 = QLineEdit("Zebedee")
-        self.radio2 = QLineEdit("Beloved")
-        self.radio3 = QLineEdit("Disciple")
-
-
-        vbox = QVBoxLayout()
-        vbox.addWidget(self.radio1)
-        vbox.addWidget(self.radio2)
-        vbox.addWidget(self.radio3)
-        vbox.addStretch(1)
-        groupBox.setLayout(vbox)
-
-        return groupBox
 
     def InstantiateDescription(self, vbox):
         self.desc = QLabel("Select Folder a folder and press search. \nThe program will search all the PDFs in the folder for the search terms. \nIt creates a new folder in the search folder with all the search results.\n"
@@ -243,7 +237,6 @@ class Window(QMainWindow):
 
     def InstantiateSearchButton(self, vbox):
         self.startSearchButton = QPushButton("Search")
-        self.startSearchButton.setToolTip('This is an example button')
         self.startSearchButton.move(100, 70)
         self.startSearchButton.clicked.connect(self.RunProgram)
         vbox.addWidget(self.startSearchButton)

@@ -110,11 +110,21 @@ def PrintSummaryOfResults(srDir, searchTerms):
 
 
 
+def ReadWrapper(dirString, file, currentBookNr, searchTerms):
+    filename = os.fsdecode(file)
+    if filename.endswith(".pdf"):
+        Read(dirString + "/" + filename, currentBookNr, searchTerms,
+             dirString=dirString)
+
+
 #GUI
 class External(QThread):
     """
-    Runs a counter thread.
+    Runs the scanning thread.
     """
+
+
+
     countChanged = pyqtSignal(int)
     directory = ""
     dirString = ""
@@ -122,13 +132,20 @@ class External(QThread):
     currentBookNr = 0
 
     def run(self):
+        self.ThreadRunContent()
+
+    def ThreadRunContent(self):
         for file in os.listdir(self.directory):
             self.currentBookNr += 1
             print(self.currentBookNr)
-            filename = os.fsdecode(file)
-            if filename.endswith(".pdf"):
-                Read(self.dirString + "/" + filename, self.currentBookNr, searchTerms=self.searchTerms, dirString=self.dirString)
+            self.ReadWrapper(self.dirString,file, self.currentBookNr, self.searchTerms)
             self.countChanged.emit(self.currentBookNr)
+
+    def ReadWrapper(self, dirString, file, currentBookNr, searchTerms):
+        filename = os.fsdecode(file)
+        if filename.endswith(".pdf"):
+            Read(dirString + "/" + filename, currentBookNr, searchTerms,
+                 dirString=dirString)
 
 
 
@@ -344,11 +361,12 @@ class Window(QMainWindow):
         self.CheckPDFAdddedByThread()
 
 
+def StartApp():
+    App = QApplication(sys.argv)
+    window = Window()
+    from Menubar import ShowMenuItems
+    menu = ShowMenuItems(mainWindow=window)
+    # menu.__init__()
+    sys.exit(App.exec())
 
-
-App = QApplication(sys.argv)
-window = Window()
-from Menubar import ShowMenuItems
-menu = ShowMenuItems(mainWindow=window)
-#menu.__init__()
-sys.exit(App.exec())
+StartApp()

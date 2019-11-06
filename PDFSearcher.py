@@ -103,8 +103,9 @@ def PrintSummaryOfResults(srDir, searchTerms):
         pageText = PageObj.extractText()
         text += pageText
     title = ""
-    for term in searchTerms:
-        title += term + " "
+    for line in searchTerms:
+        for field in line:
+            title += field.text() + " "
     print(summarize(text=text, word_count=400))
 
 

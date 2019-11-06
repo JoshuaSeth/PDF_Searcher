@@ -27,7 +27,7 @@ def Read(fileString, saveCount, searchTerms, dirString):
 
 
 
-def SearchPDFPages(dirString, fileString, openedPDF, saveCount, searchTerms):
+def SearchPDFPages(dirString, fileString, openedPDF, saveCount, searchTermsLines):
     # get number of pages
     NumPages = openedPDF.getNumPages()
     savedPages = []
@@ -39,16 +39,19 @@ def SearchPDFPages(dirString, fileString, openedPDF, saveCount, searchTerms):
         Text = PageObj.extractText()
         totalText += Text
         # print(Text)
-        foundAll = True
-        for word in searchTerms:
-            ResSearch = re.search(word, Text)
-            if (ResSearch is None):
-                foundAll = False
-        if foundAll:
-            print("Found")
-            savedPages.append(i)
+        lineCount = 0
+        for line in searchTermsLines:
+            foundAll = True
+            for field in line:
+                ResSearch = re.search(field.text(), Text)
+                if (ResSearch is None):
+                    foundAll = False
+            if foundAll:
+                print("Found all terms for line " + str(lineCount))
+                savedPages.append(i)
+            lineCount+=1
     saveCount += 1
-    SavePDFPagesAsFile(fileString, savedPages, saveCount, dirString, searchTerms)
+    SavePDFPagesAsFile(fileString, savedPages, saveCount, dirString, searchTermsLines)
 
 
 # def Print_Summary(Text):
@@ -132,7 +135,7 @@ class External(QThread):
 class Window(QMainWindow):
     dirString = "/Users/"
     directory = os.fsencode(dirString)
-    searchTerms = []
+    searchTermsLines = []
     renderedPDFS = []
     pdfLayer1DocLimit = 4
     pdfLayer2DocLimit = 4
@@ -315,9 +318,8 @@ class Window(QMainWindow):
         self.directory = os.fsencode(self.dirString)
 
     def RunProgram(self):
-        self.searchTerms.append(self.radio1.text())
-        self.searchTerms.append(self.radio2.text())
-        self.searchTerms.append(self.radio3.text())
+        for searchLine in self.searchTermBoxes:
+            self.searchTermsLines.append(searchLine.searchfields)
         print(self.directory)
         saveCount = 0
         path, dirs, files = next(os.walk(self.dirString))
@@ -329,7 +331,7 @@ class Window(QMainWindow):
         self.PDFSearchTask = External()
         self.PDFSearchTask.directory = self.directory
         self.PDFSearchTask.dirString = self.dirString
-        self.PDFSearchTask.searchTerms = self.searchTerms
+        self.PDFSearchTask.searchTerms = self.searchTermsLines
         self.PDFSearchTask.currentBookNr = saveCount
 
         #Connect multithreaded counter

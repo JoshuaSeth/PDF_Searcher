@@ -178,13 +178,16 @@ class Window(QMainWindow):
         uiContainer.addLayout(buttonsContainer)
 
         #Search term grid GUI
+        self.searchTermsUI = QVBoxLayout()
         self.SearchTermsGrid = QVBoxLayout()
-        self.AddSearchBox()
+        self.searchTermsUI.addLayout(self.SearchTermsGrid)
+        self.AddSearchBox("Search for:")
+        uiContainer.addLayout(self.searchTermsUI)
 
-        uiContainer.addLayout(self.SearchTermsGrid)
+        #Add setch line
         self.addSearchFieldButton = QPushButton("+")
-        uiContainer.addWidget(self.addSearchFieldButton)
-        self.addSearchFieldButton.clicked.connect(lambda: self.AddSearchBox())
+        self.searchTermsUI.addWidget(self.addSearchFieldButton)
+        self.addSearchFieldButton.clicked.connect(lambda: self.AddSearchBox("or:"))
 
 
 
@@ -201,9 +204,9 @@ class Window(QMainWindow):
 
         self.show()
 
-    def AddSearchBox(self):
+    def AddSearchBox(self, title):
         sb = SearchBox()
-        self.SearchTermsGrid.addWidget(sb.Get())
+        self.SearchTermsGrid.addWidget(sb.Get(title))
         self.searchTermBoxes.append(sb)
 
 

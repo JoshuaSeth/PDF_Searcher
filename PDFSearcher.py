@@ -17,7 +17,6 @@ import sys
 from gensim.summarization.summarizer import summarize
 
 
-
 def Read(fileString, saveCount, searchTerms, dirString):
     # open the pdf file
     openedPDF = PyPDF2.PdfFileReader(fileString)
@@ -110,11 +109,6 @@ def PrintSummaryOfResults(srDir, searchTerms):
 
 
 
-def ReadWrapper(dirString, file, currentBookNr, searchTerms):
-    filename = os.fsdecode(file)
-    if filename.endswith(".pdf"):
-        Read(dirString + "/" + filename, currentBookNr, searchTerms,
-             dirString=dirString)
 
 
 #GUI
@@ -195,6 +189,7 @@ class Window(QMainWindow):
         self.InstantiateGetFolderPathButton(buttonsContainer)
         self.InstantiateSearchButton(buttonsContainer)
         self.InstantiateProgressBar(buttonsContainer)
+        self.InstiantiateProfileButton(buttonsContainer)
         self.AddDockTest(buttonsContainer)
         uiContainer.addLayout(buttonsContainer)
 
@@ -224,6 +219,20 @@ class Window(QMainWindow):
         #self.setLayout(mainWidget)
 
         self.show()
+
+    def Profile(self):
+        import cProfile
+        cProfile.runctx('self.ReadForProfiler()', globals(), locals())
+
+    def ReadForProfiler(self):
+        tempSearchTerms = []
+        for searchLine in self.searchTermBoxes:
+            tempSearchTerms.append(searchLine.searchfields)
+        for file in os.listdir(self.directory):
+            filename = os.fsdecode(file)
+            if filename.endswith(".pdf"):
+                Read(self.dirString + "/" + filename, 0, tempSearchTerms,
+                     dirString=self.dirString)
 
     def AddSearchBox(self, title):
         sb = SearchBox()
@@ -257,6 +266,11 @@ class Window(QMainWindow):
     def InstantiateGetFolderPathButton(self, vbox):
         self.desc = QPushButton("Select Folder")
         self.desc.clicked.connect(self.getFolderPath)
+        vbox.addWidget(self.desc)
+
+    def InstiantiateProfileButton(self, vbox):
+        self.desc = QPushButton("Profile")
+        self.desc.clicked.connect(self.Profile)
         vbox.addWidget(self.desc)
 
     def InstantiateSearchButton(self, vbox):
@@ -370,3 +384,5 @@ def StartApp():
     sys.exit(App.exec())
 
 StartApp()
+
+

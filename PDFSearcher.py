@@ -235,8 +235,6 @@ class Window(QMainWindow):
         #Add layers to super container
 
         layout.addLayout(uiContainer)
-        layout.addLayout(self.pdfLayer1)
-        layout.addLayout(self.pdfLayer2)
         #self.setLayout(mainWidget)
 
         self.show()
@@ -311,7 +309,7 @@ class Window(QMainWindow):
         content_widget = QWidget()
         scrollArea.setWidget(content_widget)
         imagesHolder = QVBoxLayout(content_widget)
-        self.PDFRenderGrid.addLayout(scrollArea, x, y)
+        self.PDFRenderGrid.addWidget(scrollArea, x, y)
 
         #Data
         container = RenderPDFContainer()
@@ -323,14 +321,8 @@ class Window(QMainWindow):
         return scrollArea
 
 
-    def AddImageToRender(self, originalDockTitle, pixmap):
-        # If an image is not yet generated for a page generate it
-        # output = imagesPath + PDFName + "SRPage" + str(pageNR) + ".png"
-        # if not os.path.isfile(output):
-        #     page = doc.loadPage(pageNR)  # number of page
-        #     pix = page.getPixmap()
-        #     pix.writePNG(output)
-
+    def AddImageToRender(self, pdfPath, pixmap):
+        '''Called from the thread. Adding an image to the render.'''
         # Actual images
         imageLabel = QLabel(self)
         imageLabel.setPixmap(pixmap)
@@ -339,7 +331,7 @@ class Window(QMainWindow):
         #so which image holder will it be? The one containing our PDF
         selectedRenderer = None
         for renderPDFContainer in self.PDFImageHoldersInGrid:
-            if renderPDFContainer.pdf is originalDockTitle:
+            if renderPDFContainer.pdf is pdfPath:
                 selectedRenderer = renderPDFContainer
 
         #If the PDF has not started rendering yet so doesnt have a spot
@@ -347,7 +339,7 @@ class Window(QMainWindow):
             for renderPDFContainer in self.PDFImageHoldersInGrid:
                 if renderPDFContainer.pdf is "":
                     selectedRenderer = renderPDFContainer
-                    renderPDFContainer.pdf = originalDockTitle
+                    renderPDFContainer.pdf = pdfPath
 
         selectedRenderer.scrollAreaImagesHolder.addWidget(imageLabel)
         imageLabel.height = pixmap.height()
@@ -370,9 +362,9 @@ class Window(QMainWindow):
         print(len(files))
         if len(files) is not 0:
             for searchResult in searchResultsDir:
-                filename = os.fsdecode(searchResult)
-                if not self.renderedPDFS.__contains__(filename) and filename.__contains__(".pdf"):
-                    SearchPDF.openDocInProcess(path, nr, sf)
+                pdfPath = os.fsdecode(searchResult)
+                if not self.renderedPDFS.__contains__(pdfPath) and filename.__contains__(".pdf"):
+                    SearchPDF.DocForm.startDocRender(pdfPath)
 
 
 

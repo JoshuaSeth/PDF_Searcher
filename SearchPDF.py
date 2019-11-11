@@ -81,12 +81,13 @@ class DocForm(QtWidgets.QWidget):
                 #Set the label that the document is loading
                 self.label.setText('{}/{}'.format(self.currentPageNr + 1, self.totalPageCount))
             else:#tuple, pixmap info
-                pageNum, samples, width, height, stride, alpha = pageData
+                #Added path here because I also added path in the openDocProcess
+                pageNum, samples, width, height, stride, alpha, path = pageData
                 self.currentPageNr = pageNum
                 self.label.setText('{}/{}'.format(self.currentPageNr + 1, self.totalPageCount))
                 colorCodingFormat = QtGui.QImage.Format_RGBA8888 if alpha else QtGui.QImage.Format_RGB888
                 qtImage = QtGui.QImage(samples, width, height, stride, colorCodingFormat)
-                PDFSearcher.
+                PDFSearcher.Window.AddImageToRender(path ,qtImage)
         except queue.Empty as ex:
             #Else it waits
             pass
@@ -114,7 +115,7 @@ def openDocInProcess(path, queNum, quePageInfo):
             break
         page = doc.loadPage(num)
         pix = page.getPixmap()
-        quePageInfo.put((num, pix.samples, pix.width, pix.height, pix.stride, pix.alpha))
+        quePageInfo.put((num, pix.samples, pix.width, pix.height, pix.stride, pix.alpha, path))
     doc.close()
     print('process exit')
 

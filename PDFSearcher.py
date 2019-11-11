@@ -14,7 +14,25 @@ from PyQt5.QtCore import QThread, pyqtSignal, Qt
 from PyQt5.QtWidgets import QMainWindow, QApplication, QTabWidget, QScrollArea, QWidget, QVBoxLayout, QProgressBar, QLineEdit, QHBoxLayout, QPushButton, QFileDialog, QLabel, QTextEdit, QApplication, QCheckBox, QGridLayout, QGroupBox, QMenu, QPushButton, QRadioButton, QVBoxLayout, QWidget, QDockWidget, QTabBar
 import sys
 
+import SearchPDF
+
 from gensim.summarization.summarizer import summarize
+
+import AppSettings
+
+class RenderPDFContainer:
+    id = None
+    pdf = None
+    scrollAreaImagesHolder= None
+    x=None
+    y =None
+
+    def doesContain(self, ipdf):
+        if self.pdf is ipdf:
+            return True
+        else:
+            return False
+
 
 
 def Read(fileString, saveCount, searchTerms, dirString):
@@ -141,7 +159,9 @@ class External(QThread):
             Read(dirString + "/" + filename, currentBookNr, searchTerms,
                  dirString=dirString)
 
-
+class vector2():
+    x=0
+    y=0
 
 
 class Window(QMainWindow):
@@ -155,6 +175,8 @@ class Window(QMainWindow):
     currentDocsPDFLayer2 = 0
 
     searchTermBoxes = []
+
+    PDFImageHoldersInGrid = []
 
     def __init__(self):
         super().__init__()
@@ -205,11 +227,10 @@ class Window(QMainWindow):
         self.searchTermsUI.addWidget(self.addSearchFieldButton)
         self.addSearchFieldButton.clicked.connect(lambda: self.AddSearchBox("or:"))
 
-
-
-        # PDF GUI
-        self.pdfLayer1 = QHBoxLayout()
-        self.pdfLayer2 = QHBoxLayout()
+        #PDF renderers
+        self.PDFRenderGrid = QGridLayout()
+        uiContainer.addLayout(self.PDFRenderGrid)
+        self.FillGrid()
 
         #Add layers to super container
 
@@ -219,6 +240,10 @@ class Window(QMainWindow):
         #self.setLayout(mainWidget)
 
         self.show()
+
+    def GetPictureFromThread(self):
+        pass
+
 
     def Profile(self):
         import cProfile
@@ -279,44 +304,61 @@ class Window(QMainWindow):
         self.startSearchButton.clicked.connect(self.RunProgram)
         vbox.addWidget(self.startSearchButton)
 
-    def InstantiateScrollArea(self, box, PDFPath, PDFName):
-        #Make directory for images of PDF
-        imagesPath = os.getcwd() + "/PDFImages/" + PDFName +"/"
-        if not os.path.exists(imagesPath):
-            os.makedirs(imagesPath)
-
-        #Prapre container to add images to and scrollarea
+    def InstantiateScrollArea(self, x, y):
+        #Prapre container to add images to and scroll area
+        #Layout
         scrollArea = QScrollArea(widgetResizable=True)
         content_widget = QWidget()
         scrollArea.setWidget(content_widget)
         imagesHolder = QVBoxLayout(content_widget)
+        self.PDFRenderGrid.addLayout(scrollArea, x, y)
+
+        #Data
+        container = RenderPDFContainer()
+        container.x=x
+        container.y=y
+        container.scrollAreaImagesHolder = imagesHolder
+        container.id = x + y
+        self.PDFImageHoldersInGrid.append(container)
+        return scrollArea
 
 
-        #Convert PDF to JPGs
-        pdffile = PDFPath
-        doc = fitz.open(pdffile)
-        pageCount = PyPDF2.PdfFileReader(PDFPath).numPages
-        for pageNR in range(0, pageCount):
-            #If an image is not yet generated for a page generate it
-            output = imagesPath + PDFName + "SRPage" + str(pageNR) + ".png"
-            if not os.path.isfile(output):
-                page = doc.loadPage(pageNR)  # number of page
-                pix = page.getPixmap()
-                pix.writePNG(output)
+    def AddImageToRender(self, originalDockTitle, pixmap):
+        # If an image is not yet generated for a page generate it
+        # output = imagesPath + PDFName + "SRPage" + str(pageNR) + ".png"
+        # if not os.path.isfile(output):
+        #     page = doc.loadPage(pageNR)  # number of page
+        #     pix = page.getPixmap()
+        #     pix.writePNG(output)
 
-            #Actual images
-            imageLabel = QLabel(self)
-            pixmap = QPixmap(output)
-            imageLabel.setPixmap(pixmap)
-            #imageLabel.setMinimumHeight(pixmap.height())
-
-            imagesHolder.addWidget(imageLabel)
-            imageLabel.height = pixmap.height()
+        # Actual images
+        imageLabel = QLabel(self)
+        imageLabel.setPixmap(pixmap)
 
 
-        box.addWidget(scrollArea)
+        #so which image holder will it be? The one containing our PDF
+        selectedRenderer = None
+        for renderPDFContainer in self.PDFImageHoldersInGrid:
+            if renderPDFContainer.pdf is originalDockTitle:
+                selectedRenderer = renderPDFContainer
 
-    def CheckPDFAdddedByThread(self):
+        #If the PDF has not started rendering yet so doesnt have a spot
+        if selectedRenderer is None:
+            for renderPDFContainer in self.PDFImageHoldersInGrid:
+                if renderPDFContainer.pdf is "":
+                    selectedRenderer = renderPDFContainer
+                    renderPDFContainer.pdf = originalDockTitle
+
+        selectedRenderer.scrollAreaImagesHolder.addWidget(imageLabel)
+        imageLabel.height = pixmap.height()
+
+    def FillGrid(self):
+        for i in range(0, AppSettings.SettingsMenu.documentShowRows):
+            for o in range(0, AppSettings.SettingsMenu.documentShowColumns):
+                self.InstantiateScrollArea(i,o)
+
+    def RenderPDFsIfAvailable(self):
+        '''Checks if there are search result PDFs. If there are and they are not yet rendering adds a request to the threaded rendering. '''
         # make directory and write to it
         if not os.path.exists(self.dirString + "/SearchResults/"):
             os.makedirs(self.dirString + "/SearchResults/")
@@ -329,16 +371,9 @@ class Window(QMainWindow):
         if len(files) is not 0:
             for searchResult in searchResultsDir:
                 filename = os.fsdecode(searchResult)
-                filePath = dirName+filename
                 if not self.renderedPDFS.__contains__(filename) and filename.__contains__(".pdf"):
-                    layer = self.pdfLayer1
-                    if self.currentDocsPDFLayer1<self.pdfLayer1DocLimit:
-                        self.currentDocsPDFLayer1+=1
-                    if self.currentDocsPDFLayer1 >= self.pdfLayer1DocLimit:
-                        self.currentDocsPDFLayer2 += 1
-                        layer = self.pdfLayer2
-                    self.InstantiateScrollArea(layer, filePath, filename)
-                    self.renderedPDFS.append(filename)
+                    SearchPDF.openDocInProcess(path, nr, sf)
+
 
 
 
@@ -372,7 +407,8 @@ class Window(QMainWindow):
 
     def onCountChanged(self, value):
         self.progbar.setValue(value)
-        self.CheckPDFAdddedByThread()
+        self.RenderPDFsIfAvailable()
+
 
 
 def StartApp():

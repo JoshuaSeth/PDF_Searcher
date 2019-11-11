@@ -14,6 +14,7 @@ import PDFSearcher
 class DocForm(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
+
         self.currentProcess = None
         self.queue = multiprcs.Queue()
         self.docBeingProcessedInQueue = multiprcs.Queue()
@@ -87,7 +88,7 @@ class DocForm(QtWidgets.QWidget):
                 self.label.setText('{}/{}'.format(self.currentPageNr + 1, self.totalPageCount))
                 colorCodingFormat = QtGui.QImage.Format_RGBA8888 if alpha else QtGui.QImage.Format_RGB888
                 qtImage = QtGui.QImage(samples, width, height, stride, colorCodingFormat)
-                PDFSearcher.Window.AddImageToRender(path ,qtImage)
+                PDFSearcher.Window.AddImageToRender(path, qtImage)
         except queue.Empty as ex:
             #Else it waits
             pass

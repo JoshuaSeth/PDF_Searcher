@@ -178,6 +178,8 @@ class Window(QMainWindow):
 
     PDFImageHoldersInGrid = []
 
+    threadRenderer = SearchPDF.DocForm()
+
     def __init__(self):
         super().__init__()
 
@@ -363,8 +365,8 @@ class Window(QMainWindow):
         if len(files) is not 0:
             for searchResult in searchResultsDir:
                 pdfPath = os.fsdecode(searchResult)
-                if not self.renderedPDFS.__contains__(pdfPath) and filename.__contains__(".pdf"):
-                    SearchPDF.DocForm.startDocRender(pdfPath)
+                if not self.renderedPDFS.__contains__(pdfPath) and pdfPath.__contains__(".pdf"):
+                    self.threadRenderer.startDocRender(pdfPath)
 
 
 

@@ -36,16 +36,16 @@ class RenderPDFContainer:
 
 
 
-def Read(fileString, saveCount, searchTerms, dirString):
+def Read(fileString, saveCount, searchTerms, dirString, filename):
     # open the pdf file
     openedPDF = PyPDF2.PdfFileReader(fileString)
 
     if not openedPDF.isEncrypted:
-        SearchPDFPages(dirString, fileString, openedPDF, saveCount, searchTerms)
+        SearchPDFPages(dirString, fileString, openedPDF, saveCount, searchTerms, filename)
 
 
 
-def SearchPDFPages(dirString, fileString, openedPDF, saveCount, searchTermsLines):
+def SearchPDFPages(dirString, fileString, openedPDF, saveCount, searchTermsLines, filename):
     # get number of pages
     NumPages = openedPDF.getNumPages()
     savedPages = []
@@ -69,7 +69,7 @@ def SearchPDFPages(dirString, fileString, openedPDF, saveCount, searchTermsLines
                 savedPages.append(i)
             lineCount+=1
     saveCount += 1
-    SavePDFPagesAsFile(fileString, savedPages, saveCount, dirString, searchTermsLines)
+    SavePDFPagesAsFile(fileString, savedPages, saveCount, dirString, searchTermsLines, filename)
 
 
 # def Print_Summary(Text):
@@ -88,7 +88,7 @@ def SearchPDFPages(dirString, fileString, openedPDF, saveCount, searchTermsLines
     #     print(sentence)
 
 
-def SavePDFPagesAsFile(fileString, pages, saveCount, dirString, searchTerms):
+def SavePDFPagesAsFile(fileString, pages, saveCount, dirString, searchTerms, filename):
     if len(pages) is not 0:
         inputpdf = PdfFileReader(open(fileString, "rb"))
         output = PdfFileWriter()
@@ -104,7 +104,7 @@ def SavePDFPagesAsFile(fileString, pages, saveCount, dirString, searchTerms):
         #make directory and write to it
         if not os.path.exists(dirString  + "/SearchResults/"):
             os.makedirs(dirString  + "/SearchResults/")
-        srDir= dirString  + "/SearchResults/" +"result"+ str(saveCount) + "searchResult.pdf"
+        srDir= dirString  + "/SearchResults/" +"result"+ filename.replace(".pdf", "") + "searchResult.pdf"
         with open(srDir, "wb") as outputStream:
             output.write(outputStream)
 
@@ -158,7 +158,7 @@ class External(QThread):
         filename = os.fsdecode(file)
         if filename.endswith(".pdf"):
             Read(dirString + "/" + filename, currentBookNr, searchTerms,
-                 dirString=dirString)
+                 dirString=dirString, filename=filename)
 
 class vector2():
     x=0
@@ -258,7 +258,7 @@ class Window(QMainWindow):
             filename = os.fsdecode(file)
             if filename.endswith(".pdf"):
                 Read(self.dirString + "/" + filename, 0, tempSearchTerms,
-                     dirString=self.dirString)
+                     dirString=self.dirString, filename=filename)
 
     def AddSearchBox(self, title):
         sb = SearchBox()

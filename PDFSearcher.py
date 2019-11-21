@@ -14,11 +14,12 @@ from PyQt5.QtCore import QThread, pyqtSignal, Qt
 from PyQt5.QtWidgets import QMainWindow, QApplication, QTabWidget, QScrollArea, QWidget, QVBoxLayout, QProgressBar, QLineEdit, QHBoxLayout, QPushButton, QFileDialog, QLabel, QTextEdit, QApplication, QCheckBox, QGridLayout, QGroupBox, QMenu, QPushButton, QRadioButton, QVBoxLayout, QWidget, QDockWidget, QTabBar
 import sys
 
-import SearchPDF
 
 from gensim.summarization.summarizer import summarize
 
 import AppSettings
+
+App = []
 
 class RenderPDFContainer:
     id = None
@@ -178,7 +179,7 @@ class Window(QMainWindow):
 
     PDFImageHoldersInGrid = []
 
-    threadRenderer = SearchPDF.DocForm()
+
 
     def __init__(self):
         super().__init__()
@@ -352,21 +353,29 @@ class Window(QMainWindow):
                 self.InstantiateScrollArea(i,o)
 
     def RenderPDFsIfAvailable(self):
-        '''Checks if there are search result PDFs. If there are and they are not yet rendering adds a request to the threaded rendering. '''
-        # make directory and write to it
-        if not os.path.exists(self.dirString + "/SearchResults/"):
-            os.makedirs(self.dirString + "/SearchResults/")
-
-        #Loop through search results directory
-        dirName =self.dirString + "/SearchResults/"
-        searchResultsDir = os.listdir(dirName)
-        pathNU, dirsNU, files = next(os.walk(dirName))
-        print(len(files))
-        if len(files) is not 0:
-            for searchResult in searchResultsDir:
-                pdfPath = os.fsdecode(searchResult)
-                if not self.renderedPDFS.__contains__(pdfPath) and pdfPath.__contains__(".pdf"):
-                    self.threadRenderer.startDocRender(pdfPath)
+        # '''Checks if there are search result PDFs. If there are and they are not yet rendering adds a request to the threaded rendering. '''
+        # # make directory and write to it
+        # if not os.path.exists(self.dirString + "/SearchResults/"):
+        #     os.makedirs(self.dirString + "/SearchResults/")
+        #
+        # #Loop through search results directory
+        # dirName =self.dirString + "/SearchResults/"
+        # searchResultsDir = os.listdir(dirName)
+        # pathNU, dirsNU, files = next(os.walk(dirName))
+        # print(len(files))
+        #
+        # #Import the threaded renderer
+        # import SearchPDF as spdf
+        # self.threadRenderer = spdf.DocForm()
+        #
+        #
+        # if len(files) is not 0:
+        #     for searchResult in searchResultsDir:
+        #         pdfPath = os.fsdecode(dirName + str(searchResult))
+        #         print("Path for new generated PDF:" + str(pdfPath))
+        #         if not self.renderedPDFS.__contains__(pdfPath) and pdfPath.__contains__(".pdf"):
+        #             self.threadRenderer.startDocRender(pdfPath)
+        pass
 
 
 

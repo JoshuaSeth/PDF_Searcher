@@ -9,7 +9,7 @@ import multiprocessing as multiprcs
 import queue
 import fitz
 from PyQt5 import QtCore, QtGui, QtWidgets
-import PDFSearcher
+#import PDFSearcher
 
 class DocForm(QtWidgets.QWidget):
     def __init__(self):
@@ -39,6 +39,7 @@ class DocForm(QtWidgets.QWidget):
             self.lastDir, self.file = os.path.split(path)
             if self.currentProcess:
                 self.queue.put(-1) # use -1 to notify the process to exit
+                print("Has a proces already, exitting proces via put -1")
             self.timerSend.stop()
             self.currentPageNr = 0
             self.totalPageCount = 0
@@ -49,7 +50,6 @@ class DocForm(QtWidgets.QWidget):
             self.currentProcess.start()
 
             self.timerGet.start(40)
-            self.label.setText('0/0')
             #Put the started process actually in the queue
             self.queue.put(0)
             self.startTime = time.perf_counter()
@@ -79,22 +79,21 @@ class DocForm(QtWidgets.QWidget):
                 #This int is the page number.
                 self.timerWaiting.stop()
                 self.totalPageCount = pageData
-                #Set the label that the document is loading
-                self.label.setText('{}/{}'.format(self.currentPageNr + 1, self.totalPageCount))
+
             else:#tuple, pixmap info
                 #Added path here because I also added path in the openDocProcess
                 pageNum, samples, width, height, stride, alpha, path = pageData
                 self.currentPageNr = pageNum
-                self.label.setText('{}/{}'.format(self.currentPageNr + 1, self.totalPageCount))
                 colorCodingFormat = QtGui.QImage.Format_RGBA8888 if alpha else QtGui.QImage.Format_RGB888
                 qtImage = QtGui.QImage(samples, width, height, stride, colorCodingFormat)
-                PDFSearcher.Window.AddImageToRender(path, qtImage)
+                #PDFSearcher.Window.AddImageToRender(path, qtImage)
         except queue.Empty as ex:
             #Else it waits
             pass
 
     def onTimerWaiting(self):
-        self.labelImg.setText('Loading "{}", {:.2f}s'.format(self.file, time.perf_counter() - self.startTime))
+        #self.labelImg.setText('Loading "{}", {:.2f}s'.format(self.file, time.perf_counter() - self.startTime))
+        pass
 
     def closeEvent(self, event):
         self.queue.put(-1)

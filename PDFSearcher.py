@@ -90,25 +90,40 @@ def SearchPDFPages(dirString, fileString, openedPDF, saveCount, searchTermsLines
 
 def SavePDFPagesAsFile(fileString, pages, saveCount, dirString, searchTerms, filename):
     if len(pages) is not 0:
-        inputpdf = PdfFileReader(open(fileString, "rb"))
-        output = PdfFileWriter()
+        inputpdfFitz = fitz.open(fileString)
+        fitzOutput = fitz.open()
         donePages = []
+
+        from fitz.utils import getColor  # function delivers RGB triple for a color name
+        yellow = getColor("yellow")
 
         # save pages with search results to a new pdf
         for page in pages:
-            for plusandminus in range(-3, 3):
-                if not donePages.__contains__(page+plusandminus) and page+plusandminus > 0 and page+plusandminus < inputpdf.numPages:
+            for plusandminus in range(-2, 2):
+                if not donePages.__contains__(page+plusandminus) and page+plusandminus > 0 and page+plusandminus < inputpdfFitz.pageCount:
                     donePages.append(page+plusandminus)
-                    output.addPage(inputpdf.getPage(page+plusandminus))
+
+                    #Fitz procedure
+                    pageToAddFitz = inputpdfFitz.loadPage(page+plusandminus)
+                    for line in searchTerms:
+                        for word in line:
+                            rl = pageToAddFitz.searchFor(word.text())
+                            for r in rl:
+                                pageToAddFitz.drawRect(r, color=yellow, fill=yellow, overlay=False)
+                    fitzOutput.insertPDF(docsrc=inputpdfFitz, from_page=page+plusandminus, to_page=page+plusandminus)
+
 
         #make directory and write to it
         if not os.path.exists(dirString  + "/SearchResults/"):
             os.makedirs(dirString  + "/SearchResults/")
-        srDir= dirString  + "/SearchResults/" +"result"+ filename.replace(".pdf", "") + "searchResult.pdf"
-        with open(srDir, "wb") as outputStream:
-            output.write(outputStream)
 
-        PrintSummaryOfResults(srDir=srDir, searchTerms=searchTerms)
+        srDirFitz = dirString  + "/SearchResults/" +"result"+ filename.replace(".pdf", "") + "FITZsearchResult.pdf"
+
+        print(type(fitzOutput))
+        print(fitzOutput.pageCount)
+        fitzOutput.save(srDirFitz)
+
+        PrintSummaryOfResults(srDir=srDirFitz, searchTerms=searchTerms)
 
 def PrintSummaryOfResults(srDir, searchTerms):
     searchResultsPDF = PyPDF2.PdfFileReader(srDir)

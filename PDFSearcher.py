@@ -14,8 +14,8 @@ from PyQt5.QtCore import QThread, pyqtSignal, Qt
 from PyQt5.QtWidgets import QMainWindow, QApplication, QTabWidget, QScrollArea, QWidget, QVBoxLayout, QProgressBar, QLineEdit, QHBoxLayout, QPushButton, QFileDialog, QLabel, QTextEdit, QApplication, QCheckBox, QGridLayout, QGroupBox, QMenu, QPushButton, QRadioButton, QVBoxLayout, QWidget, QDockWidget, QTabBar
 import sys
 
-
 from gensim.summarization.summarizer import summarize
+
 
 import AppSettings
 
@@ -54,7 +54,12 @@ def SearchPDFPages(dirString, fileString, openedPDF, saveCount, searchTermsLines
     for i in range(0, NumPages):
         PageObj = openedPDF.getPage(i)
         print("this is page " + str(i))
-        Text = PageObj.extractText()
+        try:
+            Text = PageObj.extractText()
+        except:
+            print("exception in text extraction")
+
+
         totalText += Text
         # print(Text)
         lineCount = 0
@@ -97,20 +102,15 @@ def SavePDFPagesAsFile(fileString, pages, saveCount, dirString, searchTerms, fil
         from fitz.utils import getColor  # function delivers RGB triple for a color name
         yellow = getColor("yellow")
 
-        # save pages with search results to a new pdf
-        for page in pages:
-            for plusandminus in range(-2, 2):
-                if not donePages.__contains__(page+plusandminus) and page+plusandminus > 0 and page+plusandminus < inputpdfFitz.pageCount:
-                    donePages.append(page+plusandminus)
+        sawSearchTerms = False
 
-                    #Fitz procedure
-                    pageToAddFitz = inputpdfFitz.loadPage(page+plusandminus)
-                    for line in searchTerms:
-                        for word in line:
-                            rl = pageToAddFitz.searchFor(word.text())
-                            for r in rl:
-                                pageToAddFitz.drawRect(r, color=yellow, fill=yellow, overlay=False)
-                    fitzOutput.insertPDF(docsrc=inputpdfFitz, from_page=page+plusandminus, to_page=page+plusandminus)
+        # save pages with search results to a new pdf
+        sawSearchTerms = MakeSearchResultDoc(donePages, sawSearchTerms, fitzOutput, inputpdfFitz, pages,
+                                               searchTerms, yellow)
+
+        # If search doenst return results it needs marking with OCR
+        #if not sawSearchTerms:
+
 
 
         #make directory and write to it
@@ -124,6 +124,29 @@ def SavePDFPagesAsFile(fileString, pages, saveCount, dirString, searchTerms, fil
         fitzOutput.save(srDirFitz)
 
         PrintSummaryOfResults(srDir=srDirFitz, searchTerms=searchTerms)
+
+
+def MakeSearchResultDoc(donePages, findsSearchTerms, fitzOutput, inputpdfFitz, pages, searchTerms, yellow):
+    for page in pages:
+        for plusandminus in range(-2, 2):
+            if not donePages.__contains__(
+                    page + plusandminus) and page + plusandminus > 0 and page + plusandminus < inputpdfFitz.pageCount:
+                donePages.append(page + plusandminus)
+
+                # Fitz procedure
+                pageToAddFitz = inputpdfFitz.loadPage(page + plusandminus)
+                for line in searchTerms:
+                    for word in line:
+                        rl = pageToAddFitz.searchFor(word.text())
+                        # If search returns results which means its text and no OCR is needed
+                        if len(rl) > 0:
+                            findsSearchTerms = True
+                        for r in rl:
+                            pageToAddFitz.drawRect(r, color=yellow, fill=yellow, overlay=False)
+
+                fitzOutput.insertPDF(docsrc=inputpdfFitz, from_page=page + plusandminus, to_page=page + plusandminus)
+    return findsSearchTerms
+
 
 def PrintSummaryOfResults(srDir, searchTerms):
     searchResultsPDF = PyPDF2.PdfFileReader(srDir)
@@ -139,7 +162,8 @@ def PrintSummaryOfResults(srDir, searchTerms):
     for line in searchTerms:
         for field in line:
             title += field.text() + " "
-    print(summarize(text=text, word_count=400))
+    if text.count("") > 40:
+        print(summarize(text=text, word_count=400))
 
 
 
@@ -183,14 +207,13 @@ class vector2():
 class Window(QMainWindow):
     dirString = "/Users/"
     directory = os.fsencode(dirString)
-    searchTermsLines = []
     renderedPDFS = []
     pdfLayer1DocLimit = 4
     pdfLayer2DocLimit = 4
     currentDocsPDFLayer1 =0
     currentDocsPDFLayer2 = 0
 
-    searchTermBoxes = []
+    searchLinesOfBoxes = []
 
     PDFImageHoldersInGrid = []
 
@@ -267,7 +290,7 @@ class Window(QMainWindow):
 
     def ReadForProfiler(self):
         tempSearchTerms = []
-        for searchLine in self.searchTermBoxes:
+        for searchLine in self.searchLinesOfBoxes:
             tempSearchTerms.append(searchLine.searchfields)
         for file in os.listdir(self.directory):
             filename = os.fsdecode(file)
@@ -277,8 +300,11 @@ class Window(QMainWindow):
 
     def AddSearchBox(self, title):
         sb = SearchBox()
+        #This is necessary because other wise all class instances of searchbox refer to the same searchterms array
+        sb.searchfields = []
+        sb.AddSearchField()
         self.SearchTermsGrid.addWidget(sb.Get(title))
-        self.searchTermBoxes.append(sb)
+        self.searchLinesOfBoxes.append(sb.searchfields)
 
 
     def AddDockTest(self, vbox):
@@ -403,8 +429,11 @@ class Window(QMainWindow):
         self.directory = os.fsencode(self.dirString)
 
     def RunProgram(self):
-        for searchLine in self.searchTermBoxes:
-            self.searchTermsLines.append(searchLine.searchfields)
+        for searchLine in self.searchLinesOfBoxes:
+            print(searchLine)
+            print("Terms:")
+            for lineedit in searchLine:
+                print(lineedit.text())
         print(self.directory)
         saveCount = 0
         path, dirs, files = next(os.walk(self.dirString))
@@ -416,7 +445,7 @@ class Window(QMainWindow):
         self.PDFSearchTask = External()
         self.PDFSearchTask.directory = self.directory
         self.PDFSearchTask.dirString = self.dirString
-        self.PDFSearchTask.searchTerms = self.searchTermsLines
+        self.PDFSearchTask.searchTerms = self.searchLinesOfBoxes
         self.PDFSearchTask.currentBookNr = saveCount
 
         #Connect multithreaded counter

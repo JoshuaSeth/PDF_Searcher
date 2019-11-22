@@ -4,7 +4,7 @@ from PyQt5.QtCore import Qt
 import sys
 
 
-class SearchBox():
+class SearchBox:
     searchfields = []
 
 
@@ -13,12 +13,11 @@ class SearchBox():
         self.groupBox = QGroupBox("or:")
 
         #One initial search field
-        self.searchTerm1 = QLineEdit("Example Search Term")
+        self.searchTerm1 = QLineEdit("Example")
         self.searchfields.append(self.searchTerm1)
 
         #Add it to a vbox
         self.row = QHBoxLayout()
-        self.row.addWidget(self.searchTerm1)
 
         #Add the vbox to a container
         #self.row.addStretch(1)
@@ -33,15 +32,15 @@ class SearchBox():
         self.groupBox.setAlignment(Qt.AlignLeft)
 
     def AddSearchField(self):
-        self.nextST = QLineEdit("Example Search Term")
-        self.searchfields.append(self.nextST)
+        newST = QLineEdit("Example")
+        self.searchfields.append(newST)
 
         self.addLabel = QLabel("&")
 
         self.addLabel.setFixedWidth(10)
 
         self.row.addWidget(self.addLabel, Qt.AlignLeft)
-        self.row.addWidget(self.nextST, Qt.AlignLeft)
+        self.row.addWidget(newST, Qt.AlignLeft)
 
         self.row.removeWidget(self.addButton)
         self.row.addWidget(self.addButton)

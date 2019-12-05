@@ -16,6 +16,9 @@ import sys
 
 from gensim.summarization.summarizer import summarize
 
+import ctypes.util
+print(ctypes.util.find_library("leptonica"))
+import ocrmypdf
 
 import AppSettings
 
@@ -74,7 +77,7 @@ def SearchPDFPages(dirString, fileString, openedPDF, saveCount, searchTermsLines
                 savedPages.append(i)
             lineCount+=1
     saveCount += 1
-    SavePDFPagesAsFile(fileString, savedPages, saveCount, dirString, searchTermsLines, filename)
+    SavePDFPagesAsFile(fileString, savedPages, saveCount, dirString, searchTermsLines, filename, test=False)
 
 
 # def Print_Summary(Text):
@@ -93,7 +96,7 @@ def SearchPDFPages(dirString, fileString, openedPDF, saveCount, searchTermsLines
     #     print(sentence)
 
 
-def SavePDFPagesAsFile(fileString, pages, saveCount, dirString, searchTerms, filename):
+def SavePDFPagesAsFile(fileString, pages, saveCount, dirString, searchTerms, filename, test):
     if len(pages) is not 0:
         inputpdfFitz = fitz.open(fileString)
         fitzOutput = fitz.open()
@@ -109,21 +112,34 @@ def SavePDFPagesAsFile(fileString, pages, saveCount, dirString, searchTerms, fil
                                                searchTerms, yellow)
 
         # If search doenst return results it needs marking with OCR
-        #if not sawSearchTerms:
-
-
+        # if sawSearchTerms is False or test:
+        #     fitzOutput = OCRDoc(donePages, fileString, fitzOutput, pages, sawSearchTerms, searchTerms, yellow)
 
         #make directory and write to it
         if not os.path.exists(dirString  + "/SearchResults/"):
             os.makedirs(dirString  + "/SearchResults/")
 
-        srDirFitz = dirString  + "/SearchResults/" +"result"+ filename.replace(".pdf", "") + "FITZsearchResult.pdf"
+        ocrstring = ""
+        # if not sawSearchTerms:
+        #     ocrstring="OCRed"
+        srDirFitz = dirString  + "/SearchResults/" +"result"+ filename.replace(".pdf", "") + ocrstring + "FITZsearchResult.pdf"
 
         print(type(fitzOutput))
         print(fitzOutput.pageCount)
         fitzOutput.save(srDirFitz)
 
         PrintSummaryOfResults(srDir=srDirFitz, searchTerms=searchTerms)
+
+
+def OCRDoc(donePages, fileString, fitzOutput, pages, sawSearchTerms, searchTerms, yellow):
+    print("OCriNG!!!!!!")
+    ocrfilestring = fileString.replace(".pdf", "") + "OCRed.pdf"
+    ocrmypdf.ocr(fileString, ocrfilestring, deskew=True, force_ocr=True)
+    inputpdfFitz = fitz.open(ocrfilestring)
+    fitzOutput = fitz.open()
+    MakeSearchResultDoc(donePages, sawSearchTerms, fitzOutput, inputpdfFitz, pages,
+                        searchTerms, yellow)
+    return fitzOutput
 
 
 def MakeSearchResultDoc(donePages, findsSearchTerms, fitzOutput, inputpdfFitz, pages, searchTerms, yellow):
@@ -429,6 +445,13 @@ class Window(QMainWindow):
         self.directory = os.fsencode(self.dirString)
 
     def RunProgram(self):
+        #Test
+        pages = []
+        for i in range(0,1000):
+            pages.append(i)
+        SavePDFPagesAsFile("test.pdf", pages, 333, self.dirString, self.searchLinesOfBoxes, "Test.pdf", test=True)
+
+
         for searchLine in self.searchLinesOfBoxes:
             print(searchLine)
             print("Terms:")

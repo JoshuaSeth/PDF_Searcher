@@ -5,6 +5,8 @@ import PyPDF2
 import re
 import fitz
 
+from fitz.utils import getColor  # function delivers RGB triple for a color name
+
 from SearchBox import SearchBox
 
 #GUI
@@ -13,8 +15,6 @@ from PyQt5.QtGui import QIcon, QPixmap, QPalette
 from PyQt5.QtCore import QThread, pyqtSignal, Qt
 from PyQt5.QtWidgets import QMainWindow, QApplication, QTabWidget, QScrollArea, QWidget, QVBoxLayout, QProgressBar, QLineEdit, QHBoxLayout, QPushButton, QFileDialog, QLabel, QTextEdit, QApplication, QCheckBox, QGridLayout, QGroupBox, QMenu, QPushButton, QRadioButton, QVBoxLayout, QWidget, QDockWidget, QTabBar
 import sys
-
-from gensim.summarization.summarizer import summarize
 
 import ctypes.util
 print(ctypes.util.find_library("leptonica"))
@@ -80,36 +80,19 @@ def SearchPDFPages(dirString, fileString, openedPDF, saveCount, searchTermsLines
     SavePDFPagesAsFile(fileString, savedPages, saveCount, dirString, searchTermsLines, filename, test=False)
 
 
-# def Print_Summary(Text):
-    # # Object of automatic summarization.
-    # auto_abstractor = AutoAbstractor()
-    # # Set tokenizer.
-    # auto_abstractor.tokenizable_doc = SimpleTokenizer()
-    # # Set delimiter for making a list of sentence.
-    # auto_abstractor.delimiter_list = [".", "\n"]
-    # # Object of abstracting and filtering document.
-    # abstractable_doc = TopNRankAbstractor()
-    # # Summarize document.
-    # result_dict = auto_abstractor.summarize(Text, abstractable_doc)
-    # # Output result.
-    # for sentence in result_dict["summarize_result"]:
-    #     print(sentence)
-
-
 def SavePDFPagesAsFile(fileString, pages, saveCount, dirString, searchTerms, filename, test):
     if len(pages) is not 0:
         inputpdfFitz = fitz.open(fileString)
         fitzOutput = fitz.open()
         donePages = []
 
-        from fitz.utils import getColor  # function delivers RGB triple for a color name
-        yellow = getColor("yellow")
+
 
         sawSearchTerms = False
 
         # save pages with search results to a new pdf
         sawSearchTerms = MakeSearchResultDoc(donePages, sawSearchTerms, fitzOutput, inputpdfFitz, pages,
-                                               searchTerms, yellow)
+                                               searchTerms)
 
         # If search doenst return results it needs marking with OCR
         # if sawSearchTerms is False or test:
@@ -126,9 +109,10 @@ def SavePDFPagesAsFile(fileString, pages, saveCount, dirString, searchTerms, fil
 
         print(type(fitzOutput))
         print(fitzOutput.pageCount)
-        fitzOutput.save(srDirFitz)
+        if fitzOutput.pageCount>0:
+            fitzOutput.save(srDirFitz)
 
-        PrintSummaryOfResults(srDir=srDirFitz, searchTerms=searchTerms)
+        # PrintSummaryOfResults(srDir=srDirFitz, searchTerms=searchTerms)
 
 
 def OCRDoc(donePages, fileString, fitzOutput, pages, sawSearchTerms, searchTerms, yellow):
@@ -138,11 +122,11 @@ def OCRDoc(donePages, fileString, fitzOutput, pages, sawSearchTerms, searchTerms
     inputpdfFitz = fitz.open(ocrfilestring)
     fitzOutput = fitz.open()
     MakeSearchResultDoc(donePages, sawSearchTerms, fitzOutput, inputpdfFitz, pages,
-                        searchTerms, yellow)
+                        searchTerms)
     return fitzOutput
 
 
-def MakeSearchResultDoc(donePages, findsSearchTerms, fitzOutput, inputpdfFitz, pages, searchTerms, yellow):
+def MakeSearchResultDoc(donePages, findsSearchTerms, fitzOutput, inputpdfFitz, pages, searchTerms):
     for page in pages:
         for plusandminus in range(-2, 2):
             if not donePages.__contains__(
@@ -158,30 +142,12 @@ def MakeSearchResultDoc(donePages, findsSearchTerms, fitzOutput, inputpdfFitz, p
                         if len(rl) > 0:
                             findsSearchTerms = True
                         for r in rl:
-                            pageToAddFitz.drawRect(r, color=yellow, fill=yellow, overlay=False)
+                            hitTermColor = word.colorPicker.currentColor.getRgbF()
+                            convertHTT = (hitTermColor[0], hitTermColor[1], hitTermColor[2])
+                            pageToAddFitz.drawRect(r, color=convertHTT, fill=convertHTT, overlay=False)
 
                 fitzOutput.insertPDF(docsrc=inputpdfFitz, from_page=page + plusandminus, to_page=page + plusandminus)
     return findsSearchTerms
-
-
-def PrintSummaryOfResults(srDir, searchTerms):
-    searchResultsPDF = PyPDF2.PdfFileReader(srDir)
-    NumPages = searchResultsPDF.getNumPages()
-    text = ""
-    # extract text and do the search
-    for i in range(0, NumPages):
-        PageObj = searchResultsPDF.getPage(i)
-        print("this is page " + str(i))
-        pageText = PageObj.extractText()
-        text += pageText
-    title = ""
-    for line in searchTerms:
-        for field in line:
-            title += field.text() + " "
-    if text.count("") > 40:
-        print(summarize(text=text, word_count=400))
-
-
 
 
 
@@ -269,7 +235,7 @@ class Window(QMainWindow):
         self.InstantiateSearchButton(buttonsContainer)
         self.InstantiateProgressBar(buttonsContainer)
         self.InstiantiateProfileButton(buttonsContainer)
-        self.AddDockTest(buttonsContainer)
+        #self.AddDockTest(buttonsContainer)
         uiContainer.addLayout(buttonsContainer)
 
         #Search term grid GUI
@@ -316,24 +282,25 @@ class Window(QMainWindow):
 
     def AddSearchBox(self, title):
         sb = SearchBox()
+        sb.program = self
         #This is necessary because other wise all class instances of searchbox refer to the same searchterms array
-        sb.searchfields = []
+        sb.searchFields = []
         sb.AddSearchField()
         self.SearchTermsGrid.addWidget(sb.Get(title))
-        self.searchLinesOfBoxes.append(sb.searchfields)
+        self.searchLinesOfBoxes.append(sb.searchFields)
 
 
-    def AddDockTest(self, vbox):
-        self._tabOptions = QTabWidget(self)
-        self._tabOptions.setLayoutDirection(Qt.LeftToRight)
-        self._tabOptions.setDocumentMode(False)
-        self._tabOptions.setTabsClosable(False)
-        self._tabOptions.setMovable(False)
-
-        self.dock = QDockWidget('Tab Options', self)
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.dock)
-        self.dock.setWidget(self._tabOptions)
-        vbox.addWidget(self.progbar)
+    # def AddDockTest(self, vbox):
+    #     self._tabOptions = QTabWidget(self)
+    #     self._tabOptions.setLayoutDirection(Qt.LeftToRight)
+    #     self._tabOptions.setDocumentMode(False)
+    #     self._tabOptions.setTabsClosable(False)
+    #     self._tabOptions.setMovable(False)
+    #
+    #     self.dock = QDockWidget('Tab Options', self)
+    #     self.addDockWidget(Qt.LeftDockWidgetArea, self.dock)
+    #     self.dock.setWidget(self._tabOptions)
+    #     vbox.addWidget(self.progbar)
 
 
     def InstantiateDescription(self, vbox):
